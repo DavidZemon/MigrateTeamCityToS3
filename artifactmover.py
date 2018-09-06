@@ -37,7 +37,7 @@ def run() -> None:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('-b', '--backup-directory', default=common.DEFAULT_ARTIFACT_BACKUP_ROOT,
+    parser.add_argument('-b', '--backup-directory', default=common.DEFAULT_ARTIFACT_BACKUP_ROOT, required=True,
                         help='Local directory where old artifacts can be moved. This should be out of the way of '
                              'TeamCity\'s existing artifact root so as to ensure the S3 migration completed '
                              'successfully.')

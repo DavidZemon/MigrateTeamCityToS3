@@ -13,13 +13,13 @@ DEFAULT_ARTIFACT_BACKUP_ROOT = None
 
 
 def add_local_artifact_root_argument(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument('-l', '--local-artifact-root', default=DEFAULT_LOCAL_ARTIFACT_ROOT,
+    parser.add_argument('-l', '--local-artifact-root', default=DEFAULT_LOCAL_ARTIFACT_ROOT, required=True,
                         help='Current local artifact root with TeamCity artifacts. For example, '
                              '`/home/teamcity/.BuildServer/system/artifacts`')
 
 
 def add_aws_bucket_uri_argument(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument('-u', '--aws-bucket-uri', default=DEFAULT_AWS_BUCKET_URI,
+    parser.add_argument('-u', '--aws-bucket-uri', default=DEFAULT_AWS_BUCKET_URI, required=True,
                         help='AWS bucket URI where artifacts can be stored. Takes the form `s3://<BUCKET_NAME>`, such '
                              'as `s3://my-cool-bucket`')
 
