@@ -18,6 +18,12 @@ def add_local_artifact_root_argument(parser: argparse.ArgumentParser) -> None:
                              '`/home/teamcity/.BuildServer/system/artifacts`')
 
 
+def add_aws_bucket_uri_argument(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument('-u', '--aws-bucket-uri', default=DEFAULT_AWS_BUCKET_URI,
+                        help='AWS bucket URI where artifacts can be stored. Takes the form `s3://<BUCKET_NAME>`, such '
+                             'as `s3://my-cool-bucket`')
+
+
 def add_dry_mode_argument(parser: argparse.ArgumentParser) -> None:
     parser.add_argument('-d', '--dry', action='store_true',
                         help='Run in "dry" mode where no actions are actually performed, only log statements written '

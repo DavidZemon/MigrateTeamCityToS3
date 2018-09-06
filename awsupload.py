@@ -37,11 +37,8 @@ def run() -> None:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('-u', '--aws-bucket-uri', default=common.DEFAULT_AWS_BUCKET_URI,
-                        help='AWS bucket URI where artifacts will be uploaded. Takes the form `s3://<BUCKET_NAME>`, '
-                             'such as `s3://my-cool-bucket`')
-
     common.add_local_artifact_root_argument(parser)
+    common.add_aws_bucket_uri_argument(parser)
     common.add_dry_mode_argument(parser)
 
     return parser.parse_args()
