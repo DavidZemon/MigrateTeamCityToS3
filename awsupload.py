@@ -5,10 +5,7 @@ import json
 import os
 import subprocess
 
-# Set a default local artifact root so that you don't have to type it on the command-line all the time
-DEFAULT_LOCAL_ARTIFACT_ROOT = None
-# Set a default AWS bucket URI so that you don't have to type it on the command-line all the time
-DEFAULT_AWS_BUCKET_URI = None
+import common
 
 
 def run() -> None:
@@ -40,15 +37,12 @@ def run() -> None:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('-l', '--local-artifact-root', default=DEFAULT_LOCAL_ARTIFACT_ROOT,
-                        help='Local artifact root to be uploaded. For example, '
-                             '`/home/teamcity/.BuildServer/system/artifacts`')
-    parser.add_argument('-u', '--aws-bucket-uri', default=DEFAULT_AWS_BUCKET_URI,
+    parser.add_argument('-u', '--aws-bucket-uri', default=common.DEFAULT_AWS_BUCKET_URI,
                         help='AWS bucket URI where artifacts will be uploaded. Takes the form `s3://<BUCKET_NAME>`, '
                              'such as `s3://my-cool-bucket`')
-    parser.add_argument('-d', '--dry', action='store_true',
-                        help='Run in "dry" mode where no actions are actually performed, only log statements written '
-                             'to the console')
+
+    common.add_local_artifact_root_argument(parser)
+    common.add_dry_mode_argument(parser)
 
     return parser.parse_args()
 
