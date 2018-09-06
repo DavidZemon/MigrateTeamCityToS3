@@ -9,6 +9,8 @@ attempt to do so.
 Instructions
 ------------
 
+RECOMMENDED: Modify the constants at the top of `common.py` so that you don't have to provide any command line arguments
+
 1. Configure TeamCity to start using Amazon's S3 cloud storage for your **root project**. These scripts are only 
    useful for migrating ALL artifacts, so it only makes sense to have TeamCity start using S3 for all future artifacts 
    as well. 
