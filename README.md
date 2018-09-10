@@ -16,11 +16,8 @@ RECOMMENDED: Modify the constants at the top of `common.py` so that you don't ha
    as well. 
 2. Shutdown TeamCity to prevent any concurrency issues.
 3. Start by invoking the `awsupload.py` script to get all artifacts into S3.
-4. Unfortunately, `awsupload.py` is broken and makes a bad assumption about build configuration names based on 
-   artifact paths. You'll need to fix that mistake by updating the `dict` at the top of `awspathfixer.py` and then 
-   invoking that script.
-5. With all artifacts uploaded and paths fixed, move the old (local) artifacts out of the way by invoking 
+4. With all artifacts uploaded and paths fixed, move the old (local) artifacts out of the way by invoking 
    `artifactmover.py`. This allows you to be confident that TeamCity is no longer serving artifacts from the local 
    filesystem (and, whenever you're ready, allows you to free up disk space).
-6. Start your TeamCity server and verify functionality.
-7. Delete the backup artifact directory that was created in step 5.
+5. Start your TeamCity server and verify functionality.
+6. Delete the backup artifact directory that was created in step 5.
