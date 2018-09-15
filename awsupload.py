@@ -29,11 +29,12 @@ def run() -> None:
             for build_result in sorted(os.listdir(local_build_config_dir),key=int):
                 build_result_dir = os.path.join(local_build_config_dir,build_result)
 
-                # On cancled builds this may not exists but artifacts also are not a concern
-                properties_file = os.path.join(build_result_dir, '.teamcity/properties/build.start.properties.gz') 
+                # On canceled builds this may not exists but artifacts also are not a concern then
+                properties_file = os.path.join(build_result_dir, '.teamcity/properties/build.start.properties.gz')
                 if not os.path.isfile(properties_file):
-                  print("Could fine prop file:", properties_file)
-                  continue 
+                   print("Could not find property file '{}', "
+                         "this is assumed to be caused by a canceled build".format(properties_file))
+                   continue
                 remote_dir = get_remote_path(properties_file)
                 remote_uri = aws_bucket_uri + '/' + remote_dir
                 aws_command = ['aws', 's3', 'sync', '--exclude', '.teamcity/*', build_result_dir, remote_uri]
@@ -41,7 +42,7 @@ def run() -> None:
                 if not dry_mode:
                   subprocess.run(aws_command)
                 write_json_file(build_result_dir, remote_dir, dry_mode)
-       
+
 
 def get_remote_path(properties_file: str) -> str:
 
@@ -51,7 +52,7 @@ def get_remote_path(properties_file: str) -> str:
         build_number = config['global']['teamcity.build.id']
         build_id = config['global']['system.teamcity.buildtype.id']
         project_id = config['global']['teamcity.project.id']
-        
+
     return '{project_id}/{build_id}/{build_number}/'.format(project_id=project_id, build_id=build_id, build_number=build_number)
 
 
