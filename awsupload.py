@@ -17,7 +17,10 @@ def run() -> None:
     local_artifact_root = args.local_artifact_root
     aws_bucket_uri = args.aws_bucket_uri
     dry_mode = args.dry
-
+    teamcity_feature = args.teamcity_feature
+    ignore_missing = args.ignore_missing
+    skip_old = args.skip_old
+    
     for project in sorted(os.listdir(local_artifact_root)):
         if project.startswith('_'):
             continue
@@ -29,6 +32,10 @@ def run() -> None:
             for build_result in sorted(os.listdir(local_build_config_dir),key=int):
                 build_result_dir = os.path.join(local_build_config_dir,build_result)
 
+                if skip_old and os.path.isfile(os.path.join(build_result_dir, '.teamcity', 'artifacts.json')):
+                    print("Found previous artifacts.json file in '{}', skipping".format(build_result_dir))
+                    continue
+                    
                 # On canceled builds this may not exists but artifacts also are not a concern then
                 properties_file = os.path.join(build_result_dir, '.teamcity/properties/build.start.properties.gz')
                 if not os.path.isfile(properties_file):
@@ -41,7 +48,7 @@ def run() -> None:
                 print('> ' + ' '.join(aws_command))
                 if not dry_mode:
                   subprocess.run(aws_command)
-                write_json_file(build_result_dir, remote_dir, dry_mode)
+                write_json_file(build_result_dir, remote_dir, teamcity_feature, ignore_missing, dry_mode)
 
 
 def get_remote_path(properties_file: str) -> str:
@@ -62,28 +69,44 @@ def parse_args() -> argparse.Namespace:
     common.add_local_artifact_root_argument(parser)
     common.add_aws_bucket_uri_argument(parser)
     common.add_dry_mode_argument(parser)
+    common.add_teamcity_feature_argument(parser)
+    common.add_ignore_missing_argument(parser)
+    common.add_skip_old_argument(parser)
 
     return parser.parse_args()
 
 
-def write_json_file(build_result_dir: str, remote_dir: str, dry_run: bool) -> None:
+def write_json_file(build_result_dir: str, remote_dir: str, teamcity_feature: str, ignore_missing:str, dry_run: bool) -> None:
     artifacts = [os.path.join(build_result_dir, entry) for entry in os.listdir(build_result_dir) if entry != '.teamcity']
 
     artifact_objects = []
+    missing_file_found=False
     for artifact in artifacts:
-        assert os.path.isfile(artifact), 'Expected {0} to be a file but was not'.format(artifact)
-        artifact_objects.append({
-            "path": os.path.basename(artifact),
-            "size": os.stat(artifact).st_size,
-            "properties": {}
-        })
-
+        if os.path.isfile(artifact):
+            artifact_objects.append({
+                "path": os.path.basename(artifact),
+                "size": os.stat(artifact).st_size,
+                "properties": {}
+            })
+        else:
+            missing_file_found=True
+            error_message = 'Expected "{0}" to be a file but was not'.format(artifact)
+            if ignore_missing:
+                print(error_message)
+            else:
+                raise Exception(error_message)
+        
+    # Don't write artifact manifest if we found a irregularity
+    if missing_file_found:
+        print("Found missing file so skipping writing artifacts.json")
+        return
+    
     if artifacts:
         the_json = {
             "version": "2017.1",
             # FIXME: This is probably specific to Linux... someone might want to add flexibility someday for Windows
             #        support if this is wrong
-            "storage_settings_id": "PROJECT_EXT_4",
+            "storage_settings_id": teamcity_feature,
             "properties": {
                 "s3_path_prefix": remote_dir
             },
