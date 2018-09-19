@@ -7,6 +7,7 @@ import subprocess
 import itertools
 import gzip
 import configparser
+from datetime import datetime
 from typing import List
 
 import common
@@ -33,7 +34,7 @@ def run() -> None:
             for build_result in sorted(os.listdir(local_build_config_dir),key=int):
                 build_result_dir = os.path.join(local_build_config_dir,build_result)
 
-                print("Working in {}".format(build_result_dir))
+                print("{}: Working in {}".format(datetime.now().isoformat(' '), build_result_dir))
                 
                 if skip_old and os.path.isfile(os.path.join(build_result_dir, '.teamcity', 'artifacts.json')):
                     print("  Found previous artifacts.json file, skipping")
@@ -64,7 +65,7 @@ def run() -> None:
 def get_remote_path(properties_file: str) -> str:
 
     with gzip.open(properties_file, mode='rt', encoding="utf8") as fh:
-        config = configparser.ConfigParser()
+        config = configparser.ConfigParser(delimiters=["="])
         config.read_file(f=itertools.chain(['[global]'], fh))
         build_number = config['global']['teamcity.build.id']
         build_id = config['global']['system.teamcity.buildtype.id']
