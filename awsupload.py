@@ -7,6 +7,7 @@ import subprocess
 import itertools
 import gzip
 import configparser
+from typing import List
 
 import common
 
@@ -45,10 +46,17 @@ def run() -> None:
                 remote_dir = get_remote_path(properties_file)
                 remote_uri = aws_bucket_uri + '/' + remote_dir
                 aws_command = ['aws', 's3', 'sync', '--exclude', '.teamcity/*', build_result_dir, remote_uri]
-                print('> ' + ' '.join(aws_command))
-                if not dry_mode:
-                  subprocess.run(aws_command)
-                write_json_file(build_result_dir, remote_dir, teamcity_feature, ignore_missing, dry_mode)
+
+                if dry_mode:
+                    print("Not running '{}'".format(aws_command))
+                else:
+                    artifact_list = list(filter(lambda x: not x.startswith('.teamcity'), os.listdir(build_result_dir)))
+                    if len(artifact_list) == 0:
+                        print("No artifacts found in '{}'".format(build_result_dir))
+                    else:
+                        print('> ' + ' '.join(aws_command))
+                        subprocess.run(aws_command)
+                        write_json_file(artifact_list, build_result_dir, remote_dir, teamcity_feature, ignore_missing, dry_mode)
 
 
 def get_remote_path(properties_file: str) -> str:
@@ -76,9 +84,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def write_json_file(build_result_dir: str, remote_dir: str, teamcity_feature: str, ignore_missing:str, dry_run: bool) -> None:
-    artifacts = [os.path.join(build_result_dir, entry) for entry in os.listdir(build_result_dir) if entry != '.teamcity']
-
+def write_json_file(artifacts: List[str], build_result_dir: str, remote_dir: str, teamcity_feature: str, ignore_missing:str, dry_run: bool) -> None:
     artifact_objects = []
     missing_file_found=False
     for artifact in artifacts:
