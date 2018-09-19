@@ -33,28 +33,30 @@ def run() -> None:
             for build_result in sorted(os.listdir(local_build_config_dir),key=int):
                 build_result_dir = os.path.join(local_build_config_dir,build_result)
 
+                print("Working in {}".format(build_result_dir))
+                
                 if skip_old and os.path.isfile(os.path.join(build_result_dir, '.teamcity', 'artifacts.json')):
-                    print("Found previous artifacts.json file in '{}', skipping".format(build_result_dir))
+                    print("  Found previous artifacts.json file, skipping")
                     continue
                     
                 # On canceled builds this may not exists but artifacts also are not a concern then
                 properties_file = os.path.join(build_result_dir, '.teamcity/properties/build.start.properties.gz')
                 if not os.path.isfile(properties_file):
-                   print("Could not find property file '{}', "
-                         "this is assumed to be caused by a canceled build".format(properties_file))
+                   print(" Could not find '.teamcity/properties/build.start.properties.gz', this is assumed to be "
+                         "caused by a canceled build")
                    continue
                 remote_dir = get_remote_path(properties_file)
                 remote_uri = aws_bucket_uri + '/' + remote_dir
                 aws_command = ['aws', 's3', 'sync', '--exclude', '.teamcity/*', build_result_dir, remote_uri]
 
                 if dry_mode:
-                    print("Not running '{}'".format(aws_command))
+                    print("  Not running '{}'".format(aws_command))
                 else:
                     artifact_list = list(filter(lambda x: not x.startswith('.teamcity'), os.listdir(build_result_dir)))
                     if len(artifact_list) == 0:
-                        print("No artifacts found in '{}'".format(build_result_dir))
+                        print("  No artifacts found'".format(build_result_dir))
                     else:
-                        print('> ' + ' '.join(aws_command))
+                        print('  > ' + ' '.join(aws_command))
                         subprocess.run(aws_command)
                         write_json_file(artifact_list, build_result_dir, remote_dir, teamcity_feature, ignore_missing, dry_mode)
 
@@ -98,13 +100,13 @@ def write_json_file(artifacts: List[str], build_result_dir: str, remote_dir: str
             missing_file_found=True
             error_message = 'Expected "{0}" to be a file but was not'.format(artifact)
             if ignore_missing:
-                print(error_message)
+                print("  " + error_message)
             else:
                 raise Exception(error_message)
         
     # Don't write artifact manifest if we found a irregularity
     if missing_file_found:
-        print("Found missing file so skipping writing artifacts.json")
+        print("  Skipping writing artifacts.json due to missing file")
         return
     
     if artifacts:
@@ -119,7 +121,7 @@ def write_json_file(artifacts: List[str], build_result_dir: str, remote_dir: str
             "artifacts": artifact_objects
         }
         artifacts_json_file_path = os.path.join(build_result_dir, '.teamcity', 'artifacts.json')
-        print('Writing ' + artifacts_json_file_path)
+        print('  Writing .teamcity/artifacts.json')
         json_string = json.dumps(the_json, indent=2)
         if dry_run:
             print(json_string)
