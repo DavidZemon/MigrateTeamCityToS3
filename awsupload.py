@@ -1,16 +1,21 @@
 #!/usr/bin/python3
 
+import itertools
+
 import argparse
+import configparser
+import gzip
 import json
 import os
 import subprocess
-import itertools
-import gzip
-import configparser
 from datetime import datetime
 from typing import List
 
 import common
+
+
+class BadPropertiesFiles(BaseException):
+    pass
 
 
 def run() -> None:
@@ -22,7 +27,7 @@ def run() -> None:
     teamcity_feature = args.teamcity_feature
     ignore_missing = args.ignore_missing
     skip_old = args.skip_old
-    
+
     for project in sorted(os.listdir(local_artifact_root)):
         if project.startswith('_'):
             continue
@@ -31,22 +36,22 @@ def run() -> None:
         for build_config in sorted(os.listdir(local_project_dir)):
             local_build_config_dir = os.path.join(local_project_dir, build_config)
 
-            for build_result in sorted(os.listdir(local_build_config_dir),key=int):
-                build_result_dir = os.path.join(local_build_config_dir,build_result)
+            for build_result in sorted(os.listdir(local_build_config_dir), key=int):
+                build_result_dir = os.path.join(local_build_config_dir, build_result)
 
                 print("{}: Working in {}".format(datetime.now().isoformat(' '), build_result_dir))
-                
+
                 if skip_old and os.path.isfile(os.path.join(build_result_dir, '.teamcity', 'artifacts.json')):
                     print("  Found previous artifacts.json file, skipping")
                     continue
-                    
-                # On canceled builds this may not exists but artifacts also are not a concern then
-                properties_file = os.path.join(build_result_dir, '.teamcity/properties/build.start.properties.gz')
-                if not os.path.isfile(properties_file):
-                   print(" Could not find '.teamcity/properties/build.start.properties.gz', this is assumed to be "
-                         "caused by a canceled build")
-                   continue
-                remote_dir = get_remote_path(properties_file)
+
+                try:
+                    remote_dir = get_remote_path(build_result_dir)
+                except BadPropertiesFiles:
+                    # On canceled builds this may not exists but artifacts also are not a concern then
+                    print(" Could not find '.teamcity/properties/build.start.properties.gz', this is assumed to be "
+                          "caused by a canceled build")
+                    continue
                 remote_uri = aws_bucket_uri + '/' + remote_dir
                 aws_command = ['aws', 's3', 'sync', '--exclude', '.teamcity/*', build_result_dir, remote_uri]
 
@@ -55,14 +60,26 @@ def run() -> None:
                 else:
                     artifact_list = list(filter(lambda x: not x.startswith('.teamcity'), os.listdir(build_result_dir)))
                     if len(artifact_list) == 0:
-                        print("  No artifacts found'".format(build_result_dir))
+                        print("  No artifacts found".format(build_result_dir))
                     else:
                         print('  > ' + ' '.join(aws_command))
                         subprocess.run(aws_command)
-                        write_json_file(artifact_list, build_result_dir, remote_dir, teamcity_feature, ignore_missing, dry_mode)
+                        write_json_file(artifact_list, build_result_dir, remote_dir, teamcity_feature, ignore_missing,
+                                        dry_mode)
 
 
-def get_remote_path(properties_file: str) -> str:
+def get_remote_path(build_result_dir: str) -> str:
+    # Sometimes one of the properties files is bad (empty or too short). In those cases try the other one before giving
+    # up
+    start_prop_file = os.path.join(build_result_dir, '.teamcity/properties/build.start.properties.gz')
+    finish_prop_file = os.path.join(build_result_dir, '.teamcity/properties/build.finish.properties.gz')
+    minimun_file_size_bytes = 100  # Consider files that are smaller than this invalid
+    if os.path.isfile(start_prop_file) and os.path.getsize(start_prop_file) > minimun_file_size_bytes:
+        properties_file = start_prop_file
+    elif os.path.isfile(finish_prop_file) and os.path.getsize(finish_prop_file) > minimun_file_size_bytes:
+        properties_file = finish_prop_file
+    else:
+        raise BadPropertiesFiles("No sane looking properties file found in {}".format(build_result_dir))
 
     with gzip.open(properties_file, mode='rt', encoding="utf8") as fh:
         config = configparser.ConfigParser(delimiters=["="])
@@ -71,7 +88,8 @@ def get_remote_path(properties_file: str) -> str:
         build_id = config['global']['system.teamcity.buildtype.id']
         project_id = config['global']['teamcity.project.id']
 
-    return '{project_id}/{build_id}/{build_number}/'.format(project_id=project_id, build_id=build_id, build_number=build_number)
+    return '{project_id}/{build_id}/{build_number}/'.format(project_id=project_id, build_id=build_id,
+                                                            build_number=build_number)
 
 
 def parse_args() -> argparse.Namespace:
@@ -87,9 +105,10 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def write_json_file(artifacts: List[str], build_result_dir: str, remote_dir: str, teamcity_feature: str, ignore_missing:str, dry_run: bool) -> None:
+def write_json_file(artifacts: List[str], build_result_dir: str, remote_dir: str, teamcity_feature: str,
+                    ignore_missing: str, dry_run: bool) -> None:
     artifact_objects = []
-    missing_file_found=False
+    missing_file_found = False
     for artifact in artifacts:
         if os.path.isfile(artifact):
             artifact_objects.append({
@@ -98,18 +117,18 @@ def write_json_file(artifacts: List[str], build_result_dir: str, remote_dir: str
                 "properties": {}
             })
         else:
-            missing_file_found=True
+            missing_file_found = True
             error_message = 'Expected "{0}" to be a file but was not'.format(artifact)
             if ignore_missing:
                 print("  " + error_message)
             else:
                 raise Exception(error_message)
-        
+
     # Don't write artifact manifest if we found a irregularity
     if missing_file_found:
         print("  Skipping writing artifacts.json due to missing file")
         return
-    
+
     if artifacts:
         the_json = {
             "version": "2017.1",
