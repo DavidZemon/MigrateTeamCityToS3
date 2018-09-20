@@ -33,10 +33,6 @@ def add_teamcity_feature_argument(parser: argparse.ArgumentParser) -> None:
     parser.add_argument('-t', '--teamcity_feature', action='store', required=True,
                         help='The TeamCity feature identifier for the S3 artifact storage backend')
 
-def add_ignore_missing_argument(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument('-i', '--ignore_missing', action='store_true',
-                        help='Ignore missing files. Use when presyncing wiht a live server')
-
 def add_skip_old_argument(parser: argparse.ArgumentParser) -> None:
     parser.add_argument('-s', '--skip_old', action='store_true',
                         help='Skip builds if a artifacts.json is found. Used to skip builds that have already been '

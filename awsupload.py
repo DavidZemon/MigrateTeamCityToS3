@@ -25,7 +25,6 @@ def run() -> None:
     aws_bucket_uri = args.aws_bucket_uri
     dry_mode = args.dry
     teamcity_feature = args.teamcity_feature
-    ignore_missing = args.ignore_missing
     skip_old = args.skip_old
 
     for project in sorted(os.listdir(local_artifact_root)):
@@ -55,17 +54,25 @@ def run() -> None:
                 remote_uri = aws_bucket_uri + '/' + remote_dir
                 aws_command = ['aws', 's3', 'sync', '--exclude', '.teamcity/*', build_result_dir, remote_uri]
 
+                artifact_list = []
+                for root, dirs, files in os.walk(build_result_dir):
+                    if '/.teamcity/' in root or root.endswith('/.teamcity'):  # Skip Teamcity directory, it is not a artifact
+                        continue
+                    for file in files:
+                        full_path = os.path.join(root, file)
+                        assert os.path.isfile(full_path), \
+                            "  Found something that is not a file, {}".format(full_path)
+                        artifact_list.append(full_path)
+
+                if len(artifact_list) == 0:
+                    print("  No artifacts found".format(build_result_dir))
+                    continue
                 if dry_mode:
                     print("  Not running '{}'".format(aws_command))
                 else:
-                    artifact_list = list(filter(lambda x: not x.startswith('.teamcity'), os.listdir(build_result_dir)))
-                    if len(artifact_list) == 0:
-                        print("  No artifacts found".format(build_result_dir))
-                    else:
-                        print('  > ' + ' '.join(aws_command))
-                        subprocess.run(aws_command)
-                        write_json_file(artifact_list, build_result_dir, remote_dir, teamcity_feature, ignore_missing,
-                                        dry_mode)
+                    print('  > ' + ' '.join(aws_command))
+                    subprocess.run(aws_command)
+                write_json_file(artifact_list, build_result_dir, remote_dir, teamcity_feature, dry_mode)
 
 
 def get_remote_path(build_result_dir: str) -> str:
@@ -73,10 +80,10 @@ def get_remote_path(build_result_dir: str) -> str:
     # up
     start_prop_file = os.path.join(build_result_dir, '.teamcity/properties/build.start.properties.gz')
     finish_prop_file = os.path.join(build_result_dir, '.teamcity/properties/build.finish.properties.gz')
-    minimun_file_size_bytes = 100  # Consider files that are smaller than this invalid
-    if os.path.isfile(start_prop_file) and os.path.getsize(start_prop_file) > minimun_file_size_bytes:
+    minimum_file_size_bytes = 100  # Consider files that are smaller than this invalid
+    if os.path.isfile(start_prop_file) and os.path.getsize(start_prop_file) > minimum_file_size_bytes:
         properties_file = start_prop_file
-    elif os.path.isfile(finish_prop_file) and os.path.getsize(finish_prop_file) > minimun_file_size_bytes:
+    elif os.path.isfile(finish_prop_file) and os.path.getsize(finish_prop_file) > minimum_file_size_bytes:
         properties_file = finish_prop_file
     else:
         raise BadPropertiesFiles("No sane looking properties file found in {}".format(build_result_dir))
@@ -99,35 +106,21 @@ def parse_args() -> argparse.Namespace:
     common.add_aws_bucket_uri_argument(parser)
     common.add_dry_mode_argument(parser)
     common.add_teamcity_feature_argument(parser)
-    common.add_ignore_missing_argument(parser)
     common.add_skip_old_argument(parser)
 
     return parser.parse_args()
 
 
 def write_json_file(artifacts: List[str], build_result_dir: str, remote_dir: str, teamcity_feature: str,
-                    ignore_missing: str, dry_run: bool) -> None:
+                    dry_run: bool) -> None:
     artifact_objects = []
-    missing_file_found = False
-    for artifact in artifacts:
-        if os.path.isfile(artifact):
-            artifact_objects.append({
-                "path": os.path.basename(artifact),
-                "size": os.stat(artifact).st_size,
-                "properties": {}
-            })
-        else:
-            missing_file_found = True
-            error_message = 'Expected "{0}" to be a file but was not'.format(artifact)
-            if ignore_missing:
-                print("  " + error_message)
-            else:
-                raise Exception(error_message)
-
-    # Don't write artifact manifest if we found a irregularity
-    if missing_file_found:
-        print("  Skipping writing artifacts.json due to missing file")
-        return
+    for full_path in artifacts:
+        relative_path = os.path.relpath(full_path, start=build_result_dir)
+        artifact_objects.append({
+            "path": relative_path,
+            "size": os.path.getsize(full_path),
+            "properties": {}
+        })
 
     if artifacts:
         the_json = {

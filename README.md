@@ -55,6 +55,9 @@ file at `<install_dir>/conf/teamcity-startup.properties`.
 
 ## Hints for reducing downtime.
 
-Before starting the steps above you you can use the `--ignore_missing` and `--skip_old` with `awsupload.py` to 
-perform syncs on live servers. The results will be dirty/inomplete but it will allow you to perform the bulk of 
+Before starting the steps above you you can use `awsupload.py` to perform syncs on 
+live servers. The results may be dirty/incomplete but it will allow you to perform the bulk of 
 your data upload while still online.
+
+If you need to run `awsupload.py` multiple times you can use   `--skip_old` to speed 
+up the build.
