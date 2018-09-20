@@ -27,52 +27,34 @@ def run() -> None:
     teamcity_feature = args.teamcity_feature
     skip_old = args.skip_old
 
-    for project in sorted(os.listdir(local_artifact_root)):
-        if project.startswith('_'):
+    for build_result_dir in common.build_results_iter(local_artifact_root):
+        print("{}: Working in {}".format(datetime.now().isoformat(' '), build_result_dir))
+
+        if skip_old and os.path.isfile(os.path.join(build_result_dir, '.teamcity', 'artifacts.json')):
+            print("  Found previous artifacts.json file, skipping")
             continue
 
-        local_project_dir = os.path.join(local_artifact_root, project)
-        for build_config in sorted(os.listdir(local_project_dir)):
-            local_build_config_dir = os.path.join(local_project_dir, build_config)
+        try:
+            remote_dir = get_remote_path(build_result_dir)
+        except BadPropertiesFiles:
+            # On canceled builds this may not exists but artifacts also are not a concern then
+            print(" Could not find '.teamcity/properties/build.start.properties.gz', this is assumed to be "
+                  "caused by a canceled build")
+            continue
+        remote_uri = aws_bucket_uri + '/' + remote_dir
+        aws_command = ['aws', 's3', 'sync', '--exclude', '.teamcity/*', build_result_dir, remote_uri]
 
-            for build_result in sorted(os.listdir(local_build_config_dir), key=int):
-                build_result_dir = os.path.join(local_build_config_dir, build_result)
+        artifact_list = common.get_artifact_list(build_result_dir)
 
-                print("{}: Working in {}".format(datetime.now().isoformat(' '), build_result_dir))
-
-                if skip_old and os.path.isfile(os.path.join(build_result_dir, '.teamcity', 'artifacts.json')):
-                    print("  Found previous artifacts.json file, skipping")
-                    continue
-
-                try:
-                    remote_dir = get_remote_path(build_result_dir)
-                except BadPropertiesFiles:
-                    # On canceled builds this may not exists but artifacts also are not a concern then
-                    print(" Could not find '.teamcity/properties/build.start.properties.gz', this is assumed to be "
-                          "caused by a canceled build")
-                    continue
-                remote_uri = aws_bucket_uri + '/' + remote_dir
-                aws_command = ['aws', 's3', 'sync', '--exclude', '.teamcity/*', build_result_dir, remote_uri]
-
-                artifact_list = []
-                for root, dirs, files in os.walk(build_result_dir):
-                    if '/.teamcity/' in root or root.endswith('/.teamcity'):  # Skip Teamcity directory, it is not a artifact
-                        continue
-                    for file in files:
-                        full_path = os.path.join(root, file)
-                        assert os.path.isfile(full_path), \
-                            "  Found something that is not a file, {}".format(full_path)
-                        artifact_list.append(full_path)
-
-                if len(artifact_list) == 0:
-                    print("  No artifacts found".format(build_result_dir))
-                    continue
-                if dry_mode:
-                    print("  Not running '{}'".format(aws_command))
-                else:
-                    print('  > ' + ' '.join(aws_command))
-                    subprocess.run(aws_command)
-                write_json_file(artifact_list, build_result_dir, remote_dir, teamcity_feature, dry_mode)
+        if len(artifact_list) == 0:
+            print("  No artifacts found".format(build_result_dir))
+            continue
+        if dry_mode:
+            print("  Not running '{}'".format(aws_command))
+        else:
+            print('  > ' + ' '.join(aws_command))
+            subprocess.run(aws_command)
+        write_json_file(artifact_list, build_result_dir, remote_dir, teamcity_feature, dry_mode)
 
 
 def get_remote_path(build_result_dir: str) -> str:
