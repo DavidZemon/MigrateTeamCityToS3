@@ -18,6 +18,10 @@ class BadPropertiesFiles(BaseException):
     pass
 
 
+case_sensitive_parser = configparser.RawConfigParser(delimiters=["="])
+case_sensitive_parser.optionxform = lambda option: option
+
+
 def run() -> None:
     args = parse_args()
 
@@ -71,11 +75,12 @@ def get_remote_path(build_result_dir: str) -> str:
         raise BadPropertiesFiles("No sane looking properties file found in {}".format(build_result_dir))
 
     with gzip.open(properties_file, mode='rt', encoding="utf8") as fh:
-        config = configparser.ConfigParser(delimiters=["="])
-        config.read_file(f=itertools.chain(['[global]'], fh))
-        build_number = config['global']['teamcity.build.id']
-        build_id = config['global']['system.teamcity.buildtype.id']
-        project_id = config['global']['teamcity.project.id']
+        case_sensitive_parser.read_file(f=itertools.chain(['[global]'], fh))
+        all_parameters=case_sensitive_parser['global']
+
+        build_number = all_parameters['teamcity.build.id']
+        build_id = all_parameters['system.teamcity.buildType.id']
+        project_id = all_parameters['teamcity.project.id']
 
     return '{project_id}/{build_id}/{build_number}/'.format(project_id=project_id, build_id=build_id,
                                                             build_number=build_number)
