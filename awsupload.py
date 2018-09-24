@@ -34,8 +34,10 @@ def run() -> None:
     for build_result_dir in common.build_results_iter(local_artifact_root):
         print("{}: Working in {}".format(datetime.now().isoformat(' '), build_result_dir))
 
-        if skip_old and os.path.isfile(os.path.join(build_result_dir, '.teamcity', 'artifacts.json')):
-            print("  Found previous artifacts.json file, skipping")
+        artifacts_json_present = os.path.isfile(os.path.join(build_result_dir, '.teamcity', 'artifacts.json'))
+
+        if skip_old and artifacts_json_present:
+            print("  Found previous artifacts.json file, skipping sync")
             continue
 
         try:
@@ -58,6 +60,10 @@ def run() -> None:
         else:
             print('  > ' + ' '.join(aws_command))
             subprocess.run(aws_command)
+
+        if artifacts_json_present:
+            print("  Found previous artifacts.json file, I will not overwrite it!".format(build_result_dir))
+            continue
         write_json_file(artifact_list, build_result_dir, remote_dir, teamcity_feature, dry_mode)
 
 
@@ -76,7 +82,7 @@ def get_remote_path(build_result_dir: str) -> str:
 
     with gzip.open(properties_file, mode='rt', encoding="utf8") as fh:
         case_sensitive_parser.read_file(f=itertools.chain(['[global]'], fh))
-        all_parameters=case_sensitive_parser['global']
+        all_parameters = case_sensitive_parser['global']
 
         build_number = all_parameters['teamcity.build.id']
         build_id = all_parameters['system.teamcity.buildType.id']
