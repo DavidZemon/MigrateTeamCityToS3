@@ -20,7 +20,8 @@ start using S3 for all future artifacts as well.
 your `<root>` project settings in Kotlin format. Inside that Kotlin look for the file `_Self/Project.kt`.  Find a block 
 that looks like the one below. The `PROJECT_EXT_91` is the feature ID of this example S3 artifact store.
 
-```        feature {
+```
+        feature {
             id = "PROJECT_EXT_91"
             type = "storage_settings"
             param("secure:aws.secret.access.key", "xxxx")
