@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 import argparse
 import os
+from datetime import datetime
 
 import common
 
@@ -13,6 +14,8 @@ def run() -> None:
     dry_mode = args.dry
 
     for build_result_dir in common.build_results_iter(local_artifact_root):
+        print("{}: Working in {}".format(datetime.now().isoformat(' '), build_result_dir))
+
         artifact_list = common.get_artifact_list(build_result_dir)
         json_exists = os.path.exists(os.path.join(build_result_dir, '.teamcity', 'artifacts.json'))
         if artifact_list and json_exists:
