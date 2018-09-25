@@ -46,7 +46,7 @@ def mv(local_artifact_root: str, backup_directory: str, source: str, dry_mode: b
     relative_source = source[len(local_artifact_root):]
     target = backup_directory + relative_source
 
-    print('{0} -> {1}'.format(source, target),flush=True)
+    print('  {0} -> {1}'.format(source, target),flush=True)
     if not dry_mode:
         os.makedirs(os.path.dirname(target), exist_ok=True)
         os.rename(source, target)
