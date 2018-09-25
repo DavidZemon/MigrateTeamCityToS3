@@ -21,6 +21,8 @@ def run() -> None:
         if artifact_list and json_exists:
             for artifact in artifact_list:
                 mv(local_artifact_root, backup_directory, artifact, dry_mode)
+        elif artifact_list and args.skip_missing:
+            print("  Skipping, artifacts exist but no artifacts.json")
         elif artifact_list and not json_exists:
             raise Exception('Artifacts exist but no JSON file?! Did you successfully migrate this '
                             'directory to S3? Each directory with artifacts should have a JSON file to go '
@@ -35,6 +37,11 @@ def parse_args() -> argparse.Namespace:
                         help='Local directory where old artifacts can be moved. This should be out of the way of '
                              'TeamCity\'s existing artifact root so as to ensure the S3 migration completed '
                              'successfully.')
+
+    parser.add_argument('-s', '--skip_missing', action='store_true',
+                        help='Skip moving artifacts that do not have an associated artifacts.json. The allows '
+                             'doing uploads on live systems to reduce downtime. Without this an exception is thrown'
+                             'instead.')
 
     common.add_local_artifact_root_argument(parser)
     common.add_dry_mode_argument(parser)
