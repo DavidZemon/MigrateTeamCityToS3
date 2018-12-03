@@ -1,10 +1,9 @@
 #!/usr/bin/python3
 
-import itertools
-
 import argparse
 import configparser
 import gzip
+import itertools
 import json
 import os
 import subprocess
@@ -99,7 +98,10 @@ def parse_args() -> argparse.Namespace:
     common.add_aws_bucket_uri_argument(parser)
     common.add_dry_mode_argument(parser)
     common.add_teamcity_feature_argument(parser)
-    common.add_skip_old_argument(parser)
+
+    parser.add_argument('-s', '--skip-old', action='store_true',
+                        help='Skip builds if a artifacts.json is found. Used to skip builds that have already been '
+                             'synced')
 
     return parser.parse_args()
 

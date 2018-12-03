@@ -33,12 +33,13 @@ def run() -> None:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('-b', '--backup-directory', default=common.DEFAULT_ARTIFACT_BACKUP_ROOT, required=True,
+    parser.add_argument('-b', '--backup-directory', default=common.DEFAULT_ARTIFACT_BACKUP_ROOT,
+                        required=not common.DEFAULT_ARTIFACT_BACKUP_ROOT,
                         help='Local directory where old artifacts can be moved. This should be out of the way of '
                              'TeamCity\'s existing artifact root so as to ensure the S3 migration completed '
                              'successfully.')
 
-    parser.add_argument('-s', '--skip_missing', action='store_true',
+    parser.add_argument('-s', '--skip-missing', action='store_true',
                         help='Skip moving artifacts that do not have an associated artifacts.json. The allows '
                              'doing uploads on live systems to reduce downtime. Without this an exception is thrown'
                              'instead.')
