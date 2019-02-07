@@ -58,7 +58,7 @@ def run() -> None:
             print("  Not running '{}'".format(aws_command))
         else:
             print('  > ' + ' '.join(aws_command))
-            subprocess.run(aws_command)
+            subprocess.run(aws_command, shell=True)
 
         if artifacts_json_present:
             print("  Found previous artifacts.json file, I will not overwrite it!".format(build_result_dir))
