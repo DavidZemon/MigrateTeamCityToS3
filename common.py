@@ -62,7 +62,7 @@ def build_results_iter(local_artifact_root: str) -> Generator[str, None, None]:
 def get_artifact_list(build_result_dir: str) -> List[str]:
     artifact_list = []
     for root, dirs, files in os.walk(build_result_dir):
-        if '/.teamcity/' in root or root.endswith('/.teamcity'):  # Skip Teamcity directory, it is not a artifact
+        if '/.teamcity/' in root or '\\.teamcity\\' in root or root.endswith('/.teamcity') or root.endswith('\\.teamcity'):  # Skip Teamcity directory, it is not a artifact
             continue
         for file in files:
             full_path = os.path.join(root, file)
