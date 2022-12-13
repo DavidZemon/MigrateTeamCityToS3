@@ -2,9 +2,10 @@ Migrate TeamCity to Amazon's S3
 ===============================
 
 TeamCity natively supports storing build artifacts in Amazon's S3 cloud storage. This is a great way to speed up 
-artifact downloads and never worry about running out of disk space. Unfortunately, JetBrains does not (currently) 
-provide any scripts to help with the migration of an existing server to S3 storage. These scripts are one person's 
-attempt to do so.
+artifact downloads and never worry about running out of disk space. Unfortunately, JetBrains did not use to 
+provide any scripts to help with the migration of an existing server to S3 storage 
+(now [they do](https://www.jetbrains.com/help/teamcity/configuring-artifacts-storage.html#Migrating+Artifacts+To+a+Different+Storage), since version 2022.04).
+These scripts are one person's attempt to do so.
 
 Instructions
 ------------
